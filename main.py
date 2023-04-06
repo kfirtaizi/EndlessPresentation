@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     while True:
         # Get user input for the slide topic
-        topic = input("Enter a topic for the next slide (or type 'exit' to finish): ")
+        topic = input("Ask a question (or type 'exit' to finish): ")
 
         if topic.lower() == "exit":
             break
