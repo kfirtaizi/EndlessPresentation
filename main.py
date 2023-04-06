@@ -1,17 +1,11 @@
 import os
-import collections
-import collections.abc
-from pptx import Presentation
-from pptx.util import Inches
-from pptx.enum.text import PP_ALIGN
-from pptx.enum.shapes import MSO_SHAPE
-
+import win32com.client
 import openai
 
 openai.api_key = "my-api-key"
 
 
-def generate_bullet_points(prompt, max_tokens=100):
+def generate_bullet_points(prompt, max_tokens=300):
     response = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
@@ -26,47 +20,66 @@ def generate_bullet_points(prompt, max_tokens=100):
     return bullet_points
 
 
-def add_slide(prs, title, bullet_points):
-    slide_layout = prs.slide_layouts[5]  # Use the blank layout
-    slide = prs.slides.add_slide(slide_layout)
+# Start an instance of PowerPoint
+PowerPointApp = win32com.client.Dispatch("PowerPoint.Application")
 
-    # Add a title to the slide
-    title_shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(0.5), Inches(9), Inches(1))
-    title_shape.text = title
-    title_shape.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+# Make the PowerPoint application visible
+PowerPointApp.Visible = True
 
-    # Add bullet points
-    bullet_shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(1.5), Inches(9), Inches(5))
-    text_frame = bullet_shape.text_frame
-    for idx, point in enumerate(bullet_points):
-        if idx > 0:
-            text_frame.add_paragraph()
-        paragraph = text_frame.paragraphs[idx]
-        paragraph.text = point
-        paragraph.level = 0
-        paragraph.space_after = Inches(0.1)
+# Create a new presentation
+presentation = PowerPointApp.Presentations.Add()
 
-    return slide
+num_slides = 1
 
-
-# Create the presentation
-prs = Presentation()
-
-# Loop to add slides based on user input
 while True:
+    # Get user input for the slide topic
     topic = input("Enter a topic for the next slide (or type 'exit' to finish): ")
 
     if topic.lower() == "exit":
         break
 
     # Generate bullet points using GPT-3
-    prompt = f"Explain the topic '{topic}' and provide a few bullet points, not exceeding 90 words total"
+    prompt = f"Explain the topic '{topic}' and provide a 3-5 short bullet points, each bullet points starting with a " \
+             f"new line (no need to start with a bullet) "
     bullet_points = generate_bullet_points(prompt)
 
-    slide = add_slide(prs, topic, bullet_points)
-    print(f"Slide '{topic}' added with bullet points.")
+    # Add a slide to the presentation
+    slide = presentation.Slides.Add(num_slides, 2)
+
+    # Set the slide title
+    title_shape = slide.Shapes.Title
+    title_shape.TextFrame.TextRange.Text = topic
+
+    # Delete the text box shape from the slide
+    text_box = slide.Shapes.Placeholders.Item(2)
+    text_box.Delete()
+
+    # Add bullet points to the slide
+    text_box = slide.Shapes.AddTextbox(
+        1, # Orientation
+        100,  # Left
+        100,  # Top
+        400,  # Width
+        100,  # Height
+    )
+    text_frame = text_box.TextFrame
+
+    paragraph = text_frame.TextRange
+    for idx, point in enumerate(bullet_points):
+        if point.startswith("•"):
+            if idx < len(bullet_points) - 1:
+                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•") + "\n")
+            else:
+                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•"))
+            paragraph.ParagraphFormat.Bullet.Type = 1
+
+    num_slides += 1
 
 # Save the presentation
-presentation_name = "runtime_presentation.pptx"
-prs.save(presentation_name)
-os.startfile(presentation_name)  # Open the presentation in PowerPoint
+presentation.SaveAs(os.path.join(os.getcwd(), "real_time_presentation.pptx"))
+
+# Close the presentation
+presentation.Close()
+
+# Quit the PowerPoint application
+PowerPointApp.Quit()
