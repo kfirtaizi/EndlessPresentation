@@ -6,7 +6,7 @@ with open("api_key.txt", "r") as f:
     openai.api_key = f.read().strip()
 
 
-def generate_title(prompt, max_tokens=20):
+def generate_title(prompt, max_tokens=40):
     response = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
