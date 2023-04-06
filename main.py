@@ -2,7 +2,22 @@ import os
 import win32com.client
 import openai
 
-openai.api_key = "my-api-key"
+with open("api_key.txt", "r") as f:
+    openai.api_key = f.read().strip()
+
+
+def generate_title(prompt, max_tokens=20):
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        temperature=0.7,
+        max_tokens=max_tokens,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+    )
+
+    return response.choices[0].text
 
 
 def generate_bullet_points(prompt, max_tokens=300):
@@ -38,25 +53,34 @@ while True:
     if topic.lower() == "exit":
         break
 
-    # Generate bullet points using GPT-3
-    prompt = f"Explain the topic '{topic}' and provide a 3-5 short bullet points, each bullet points starting with a " \
-             f"new line (no need to start with a bullet) "
+    prompt = f"Explain the topic \"'{topic}'\" in short by 2-5 short bullet points with interesting information on " \
+             f"the subject. "
     bullet_points = generate_bullet_points(prompt)
+
+    # Generate bullet points using GPT-3
+    prompt = f"Formulate the question: \"'{topic}'\" as a nice title for a slide in a presentation (Provide just text, no quotes or anything)"
+    title = generate_title(prompt)
 
     # Add a slide to the presentation
     slide = presentation.Slides.Add(num_slides, 2)
 
     # Set the slide title
     title_shape = slide.Shapes.Title
-    title_shape.TextFrame.TextRange.Text = topic
+    title_shape.TextFrame.TextRange.Text = title
 
     # Delete the text box shape from the slide
     text_box = slide.Shapes.Placeholders.Item(2)
     text_box.Delete()
 
+    title_shape.Top = 0  # Move the title higher, adjust this value as needed
+    title_shape.Width = 720  # Set the width to the slide width
+    title_shape.Height = 50  # Set the height, adjust as needed
+    title_shape.TextFrame.WordWrap = False  # Disable word wrapping
+    title_shape.TextFrame.AutoSize = 1  # Auto resize text to fit the shape
+
     # Add bullet points to the slide
     text_box = slide.Shapes.AddTextbox(
-        1, # Orientation
+        1,  # Orientation
         100,  # Left
         100,  # Top
         400,  # Width
@@ -68,9 +92,9 @@ while True:
     for idx, point in enumerate(bullet_points):
         if point.startswith("•"):
             if idx < len(bullet_points) - 1:
-                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•") + "\n")
+                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•").lstrip() + "\n")
             else:
-                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•"))
+                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•").lstrip())
             paragraph.ParagraphFormat.Bullet.Type = 1
 
     num_slides += 1
