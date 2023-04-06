@@ -71,7 +71,7 @@ def transcribe_speech():
 
 
 if __name__ == "__main__":
-    with open("api_key.txt", "r") as f:
+    with open("keys/api_key.txt", "r") as f:
         openai.api_key = f.read().strip()
 
     # Start an instance of PowerPoint
