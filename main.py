@@ -92,7 +92,7 @@ while True:
         1,  # Orientation
         100,  # Left
         100,  # Top
-        400,  # Width
+        600,  # Width
         100,  # Height
     )
     text_frame = text_box.TextFrame
@@ -105,6 +105,8 @@ while True:
             else:
                 paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•").lstrip())
             paragraph.ParagraphFormat.Bullet.Type = 1
+            paragraph.ParagraphFormat.SpaceAfter = 12
+            paragraph.ParagraphFormat.SpaceBefore = 0
 
     num_slides += 1
 
