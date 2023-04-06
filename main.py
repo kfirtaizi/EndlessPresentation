@@ -1,4 +1,6 @@
 import os
+import random
+
 import win32com.client
 import openai
 
@@ -53,13 +55,13 @@ while True:
     if topic.lower() == "exit":
         break
 
-    prompt = f"Explain the topic \"'{topic}'\" in short by 2-5 short bullet points with interesting information on " \
-             f"the subject. "
-    bullet_points = generate_bullet_points(prompt)
+    prompt = f"Formulate the question: \"'{topic}'\" as a nice title (don't make it too formal) for a slide in a presentation"
+    title = generate_title(prompt).replace('"', '')
 
-    # Generate bullet points using GPT-3
-    prompt = f"Formulate the question: \"'{topic}'\" as a nice title for a slide in a presentation (Provide just text, no quotes or anything)"
-    title = generate_title(prompt)
+    num_bullets = random.randint(2, 4)
+    prompt = f"Explain the topic \"'{title}'\" in short by {num_bullets}-{num_bullets + 1} short bullet points with " \
+             f"interesting information on the subject. "
+    bullet_points = generate_bullet_points(prompt)
 
     # Add a slide to the presentation
     slide = presentation.Slides.Add(num_slides, 2)
@@ -73,10 +75,17 @@ while True:
     text_box.Delete()
 
     title_shape.Top = 0  # Move the title higher, adjust this value as needed
-    title_shape.Width = 720  # Set the width to the slide width
-    title_shape.Height = 50  # Set the height, adjust as needed
+    title_shape.Width = 900  # Set the width to the slide width
+    title_shape.Height = 40  # Set the height, adjust as needed
     title_shape.TextFrame.WordWrap = False  # Disable word wrapping
-    title_shape.TextFrame.AutoSize = 1  # Auto resize text to fit the shape
+    title_shape.TextFrame.AutoSize = 0  # Disable auto resizing
+    title_shape.TextFrame.MarginLeft = 0  # Remove left margin
+    title_shape.TextFrame.MarginRight = 0  # Remove right margin
+
+    # Reduce the font of the title if it exceeds the slide width
+    title_text = title
+    while title_shape.TextFrame.TextRange.BoundWidth > title_shape.Width:
+        title_shape.TextFrame.TextRange.Font.Size -= 2
 
     # Add bullet points to the slide
     text_box = slide.Shapes.AddTextbox(
