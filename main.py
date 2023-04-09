@@ -1,3 +1,4 @@
+import html
 import os
 import struct
 
@@ -65,7 +66,7 @@ if __name__ == "__main__":
                 print("Wakeword detected!")
                 transcribed_text = transcribe_speech()
 
-                translated_text = translate_client.translate(transcribed_text, target_language='en')['translatedText']
+                translated_text = html.unescape(translate_client.translate(transcribed_text, target_language='en')['translatedText'])
 
                 if detect_question(translated_text):
                     print(f"Question: {translated_text}")

@@ -14,7 +14,10 @@ def detect_question(text):
         "do you", "does he", "does she", "does one", "did you", "did he", "did she", "did one",
         "might you", "may you", "must you", "haven't", "hasn't", "hadn't", "don't", "doesn't", "didn't",
         "can't", "couldn't", "shouldn't", "shan't", "won't", "wouldn't", "mightn't", "mustn't", "aren't", "isn't",
-        "weren't", "wasn't"
+        "weren't", "wasn't", "what is", "what's", "what are", "what're", "what was", "what's", "what were", "what've",
+        "what have", "what has", "what had", "what do", "what does", "what did", "what can", "what could",
+        "what should",
+        "what shall", "what will", "what would", "what might", "what may", "what must"
     ]
 
     return text.endswith("?") or any(text.lower().startswith(qw) for qw in question_words)
