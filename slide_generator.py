@@ -29,7 +29,7 @@ def contrast_color(color):
     return 255 - r, 255 - g, 255 - b
 
 
-def generate_title(prompt, max_tokens=40):
+def ask_chatgpt(prompt, max_tokens=1024):
     response = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
@@ -43,18 +43,14 @@ def generate_title(prompt, max_tokens=40):
     return response.choices[0].text
 
 
-def generate_bullet_points(prompt, max_tokens=300):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        temperature=0.7,
-        max_tokens=max_tokens,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
-    )
+def generate_title(prompt, max_tokens=40):
+    return ask_chatgpt(prompt, max_tokens)
 
-    bullet_points = response.choices[0].text.strip().split("\n")
+
+def generate_bullet_points(prompt, max_tokens=300):
+    response = ask_chatgpt(prompt, max_tokens)
+
+    bullet_points = response.strip().split("\n")
     return bullet_points
 
 
@@ -130,7 +126,7 @@ def generate_slide(presentation, topic):
     prompt = f"Formulate the question: \"'{topic}'\" as a nice title (don't make it too formal) for a slide in a presentation"
     title = generate_title(prompt).replace('"', '').replace('\n', '')
 
-    prompt = f"Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
+    prompt = f"Context: {prompt}\n\nQuestion: Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
              f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here:"
     bullet_points = generate_bullet_points(prompt)
 
@@ -156,7 +152,7 @@ def generate_slide(presentation, topic):
     # Add bullet points to the slide
     left = Inches(0)
     top = Inches(1.2)
-    width = Inches(random.randint(10, 12))  # Set the width to the random slide width
+    width = Inches(random.randint(9, 10))  # Set the width to the random slide width
     height = Inches(6)
 
     tx_box = slide.shapes.add_textbox(left, top, width, height)
