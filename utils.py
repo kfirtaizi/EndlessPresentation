@@ -63,3 +63,7 @@ def transcribe_speech():
     except Exception as e:
         print(f"Error during transcription: {e}")
         return ""
+
+def rgb_to_int(color):
+    r, g, b = color
+    return r + (g * 256) + (b * 256 * 256)

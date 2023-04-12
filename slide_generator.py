@@ -1,11 +1,32 @@
-import io
 import os
 import random
 import tempfile
+from collections import defaultdict
+from operator import itemgetter
 
 import openai
-import requests
 from PIL import Image
+from pptx.dml.color import RGBColor
+from pptx.util import Inches, Pt
+
+from utils import rgb_to_int
+
+
+def get_dominant_colors(image_path, num_colors=3):
+    img = Image.open(image_path).resize((150, 150), Image.ANTIALIAS)
+    pixels = img.getcolors(img.size[0] * img.size[1])
+
+    color_count = defaultdict(int)
+    for count, color in pixels:
+        color_count[color] += count
+
+    sorted_colors = sorted(color_count.items(), key=itemgetter(1), reverse=True)
+    return [color for color, count in sorted_colors[:num_colors]]
+
+
+def contrast_color(color):
+    r, g, b = color
+    return 255 - r, 255 - g, 255 - b
 
 
 def generate_title(prompt, max_tokens=40):
@@ -56,90 +77,108 @@ def add_picture_from_pil_image(slide, pil_image, left, top, width, height):
     )
 
     # Delete the temporary file from disk
+    dominant_colors = get_dominant_colors(image_filename)
+    text_color = contrast_color(dominant_colors[0])
+
     os.remove(image_filename)
 
-    return picture_shape
+    return text_color
 
 
-def add_related_picture(presentation, text_box, slide, prompt):
-    picture_width = 200  # Set the width of the picture, adjust as needed
-    picture_height = 200  # Set the height of the picture, adjust as needed
+def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
+    # Save the PIL image to a temporary in-memory file
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as image_file:
+        pil_image.save(image_file, "PNG")
+        image_file.seek(0)
+        image_filename = image_file.name
 
-    # Generate the image using DALL-E
-    response = openai.Image.create(prompt=prompt)
+    # Set the slide background image
+    pic = slide.shapes.add_picture(image_filename, 0, 0, width=presentation.slide_width, height=presentation.slide_height)
 
-    # Get the image URL from the response
-    image_url = response["data"][0]["url"]
+    # This moves it to the background
+    slide.shapes._spTree.remove(pic._element)
+    slide.shapes._spTree.insert(2, pic._element)
 
-    # Download the image from the URL
-    image_data = requests.get(image_url).content
+    # Get dominant colors in the image to present the text later in a contract color
+    dominant_colors = get_dominant_colors(image_filename)
+    text_color = contrast_color(dominant_colors[0])
+
+    # Delete the temporary file from disk
+    # os.remove(image_filename)
+
+    return text_color
+
+
+def add_related_picture(slide, presentation, prompt):
+    # # Generate the image using DALL-E
+    # response = openai.Image.create(prompt=prompt)
+    #
+    # # Get the image URL from the response
+    # image_url = response["data"][0]["url"]
+    #
+    # # Download the image from the URL
+    # image_data = requests.get(image_url).content
 
     # Load the image data into a PIL Image object
-    pil_image = Image.open(io.BytesIO(image_data))
+    pil_image = Image.open(r"C:\Users\kfir1\AppData\Local\Temp\tmpid2gdvex.png")
 
-    # Check if there is enough space to place the picture without overlapping
-    if (text_box.Left + text_box.Width + 10 + picture_width) <= presentation.PageSetup.SlideWidth:
-        add_picture_from_pil_image(slide, pil_image, text_box.Left + text_box.Width + 10, text_box.Top, picture_width,
-                                   picture_height)
-    elif (text_box.Top + text_box.Height + 10 + picture_height) <= presentation.PageSetup.SlideHeight:
-        add_picture_from_pil_image(slide, pil_image, text_box.Left, text_box.Top + text_box.Height + 10, picture_width,
-                                   picture_height)
-    else:
-        print("Warning: There is not enough space to place the picture without overlapping.")
+    text_color = add_picture_from_pil_image_as_background(slide, presentation, pil_image)
+    return text_color
 
 
-def generate_slide(presentation, topic, slide_num):
+def generate_slide(presentation, topic):
     prompt = f"Formulate the question: \"'{topic}'\" as a nice title (don't make it too formal) for a slide in a presentation"
-    title = generate_title(prompt).replace('"', '')
+    title = generate_title(prompt).replace('"', '').replace('\n', '')
 
-    num_bullets = random.randint(2, 4)
-    prompt = f"Explain the topic \"'{title}'\" in short by {num_bullets}-{num_bullets + 1} short bullet points with " \
-             f"interesting information on the subject. "
+    prompt = f"Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
+             f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here:"
     bullet_points = generate_bullet_points(prompt)
 
     # Add a slide to the presentation
-    slide = presentation.Slides.Add(slide_num, 2)
+    slide_layout = presentation.slide_layouts[5]
+    slide = presentation.slides.add_slide(slide_layout)
+
+    # Add background image that is related to the topic
+    # text_color = add_related_picture(slide, presentation, title)
 
     # Set the slide title
-    title_shape = slide.Shapes.Title
-    title_shape.TextFrame.TextRange.Text = title
+    title_shape = slide.shapes.title
+    title_shape.text = title
+    # title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(text_color[0], text_color[1], text_color[2])
 
-    # Delete the text box shape from the slide
-    text_box = slide.Shapes.Placeholders.Item(2)
-    text_box.Delete()
+    # Adjust the font size if the title exceeds the slide width
+    font_size = Pt(18)  # Set a default font size, e.g., 18 points
 
-    title_shape.Top = 0  # Move the title higher, adjust this value as needed
-    title_shape.Width = random.randint(700, 900)  # Set the width to the slide width
-    title_shape.Height = 40  # Set the height, adjust as needed
-    title_shape.TextFrame.WordWrap = False  # Disable word wrapping
-    title_shape.TextFrame.AutoSize = 0  # Disable auto resizing
-    title_shape.TextFrame.MarginLeft = 0  # Remove left margin
-    title_shape.TextFrame.MarginRight = 0  # Remove right margin
-
-    # Reduce the font of the title if it exceeds the slide width
-    while title_shape.TextFrame.TextRange.BoundWidth > title_shape.Width:
-        title_shape.TextFrame.TextRange.Font.Size -= 2
+    while title_shape.width < font_size * len(title) * 0.6:
+        font_size -= Pt(2)
+        title_shape.text_frame.paragraphs[0].runs[0].font.size = font_size
 
     # Add bullet points to the slide
-    text_box = slide.Shapes.AddTextbox(
-        1,  # Orientation
-        100,  # Left
-        100,  # Top
-        600,  # Width
-        100,  # Height
-    )
-    text_frame = text_box.TextFrame
+    left = Inches(0)
+    top = Inches(1.2)
+    width = Inches(random.randint(10, 12))  # Set the width to the random slide width
+    height = Inches(6)
 
-    paragraph = text_frame.TextRange
-    for idx, point in enumerate(bullet_points):
-        if point.startswith("•"):
-            if idx < len(bullet_points) - 1:
-                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•").lstrip() + "\n")
-            else:
-                paragraph = text_frame.TextRange.InsertAfter(point.lstrip("•").lstrip())
-            paragraph.ParagraphFormat.Bullet.Type = 1
-            paragraph.ParagraphFormat.SpaceAfter = 12
-            paragraph.ParagraphFormat.SpaceBefore = 0
+    tx_box = slide.shapes.add_textbox(left, top, width, height)
+    tf = tx_box.text_frame
 
-    # add_related_picture(presentation, text_box, slide, title) # MONEYYYYYYYYYYYY
+    # Adjust the text box properties
+    tf.word_wrap = True  # Enable word wrapping
+    tf.auto_size = 0  # Disable auto resizing
+    tf.margin_left = Inches(0.1)  # Set left margin
+    tf.margin_right = Inches(0.1)  # Set right margin
+    tf.margin_top = Inches(0.1)  # Set top margin
+    tf.margin_bottom = Inches(0.1)  # Set bottom margin
+
+    # Add nested bullet points to the text of the presentation
+    for point in bullet_points:
+        if point.startswith("--"):
+            p = tf.add_paragraph()
+            p.text = point.strip("-")
+            p.level = 1
+        else:
+            p = tf.add_paragraph()
+            p.text = point
+            p.level = 0
+
     return

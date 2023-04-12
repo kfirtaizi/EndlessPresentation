@@ -9,6 +9,9 @@ import win32com.client
 from google.cloud import translate_v2
 
 from slide_generator import generate_slide
+import collections
+import collections.abc
+from pptx import Presentation
 from utils import transcribe_speech, detect_question
 
 
@@ -66,11 +69,24 @@ if __name__ == "__main__":
                 print("Wakeword detected!")
                 transcribed_text = transcribe_speech()
 
-                translated_text = html.unescape(translate_client.translate(transcribed_text, target_language='en')['translatedText'])
+                translated_text = html.unescape(
+                    translate_client.translate(transcribed_text, target_language='en')['translatedText'])
 
                 if detect_question(translated_text):
                     print(f"Question: {translated_text}")
-                    generate_slide(presentation, translated_text, num_slides)
+
+                    temp_presentation_path = os.path.abspath("temp_presentation.pptx")
+
+                    temp_presentation = Presentation()
+                    generate_slide(temp_presentation, translated_text)
+                    temp_presentation.save(temp_presentation_path)
+
+                    opened_temp_presentation = PowerPointApp.Presentations.Open(temp_presentation_path)
+                    opened_temp_presentation.Slides(1).Copy()
+                    presentation.Slides.Paste()
+                    opened_temp_presentation.Close()
+                    os.remove(temp_presentation_path)
+
                     num_slides += 1
                 else:
                     print(f"Not a question {translated_text}")
