@@ -1,6 +1,7 @@
 import html
 import os
 import struct
+import uuid
 
 import openai
 import pvporcupine
@@ -75,7 +76,7 @@ if __name__ == "__main__":
                 if detect_question(translated_text):
                     print(f"Question: {translated_text}")
 
-                    temp_presentation_path = os.path.abspath("temp_presentation.pptx")
+                    temp_presentation_path = os.path.abspath(f"temp_presentation-{str(uuid.uuid4())}.pptx")
 
                     temp_presentation = Presentation()
                     generate_slide(temp_presentation, translated_text)
