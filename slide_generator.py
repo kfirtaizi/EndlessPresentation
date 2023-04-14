@@ -1,46 +1,12 @@
 import os
 import random
 import tempfile
-from collections import defaultdict
-from operator import itemgetter
 
-import openai
 from PIL import Image
 from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
-from utils import rgb_to_int
-
-
-def get_dominant_colors(image_path, num_colors=3):
-    img = Image.open(image_path).resize((150, 150), Image.ANTIALIAS)
-    pixels = img.getcolors(img.size[0] * img.size[1])
-
-    color_count = defaultdict(int)
-    for count, color in pixels:
-        color_count[color] += count
-
-    sorted_colors = sorted(color_count.items(), key=itemgetter(1), reverse=True)
-    return [color for color, count in sorted_colors[:num_colors]]
-
-
-def contrast_color(color):
-    r, g, b = color
-    return 255 - r, 255 - g, 255 - b
-
-
-def ask_chatgpt(prompt, max_tokens=1024):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        temperature=0.7,
-        max_tokens=max_tokens,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
-    )
-
-    return response.choices[0].text
+from utils import ask_chatgpt, get_dominant_colors, contrast_color
 
 
 def generate_title(prompt, max_tokens=40):
@@ -126,8 +92,8 @@ def generate_slide(presentation, topic):
     prompt = f"Formulate the question: \"'{topic}'\" as a nice title (don't make it too formal) for a slide in a presentation"
     title = generate_title(prompt).replace('"', '').replace('\n', '')
 
-    prompt = f"Context: {prompt}\n\nQuestion: Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
-             f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here:"
+    prompt = f"Context: [Question:{prompt}\nAnswer:{title}]\n\nQuestion: Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
+             f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here (No need for a title again):"
     bullet_points = generate_bullet_points(prompt)
 
     # Add a slide to the presentation

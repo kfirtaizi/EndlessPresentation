@@ -1,7 +1,11 @@
+from collections import defaultdict
 from io import BytesIO
+from operator import itemgetter
 
 import google.cloud.speech_v1p1beta1 as speech
+import openai
 import pyaudio
+from PIL import Image
 
 
 def detect_question(text):
@@ -64,6 +68,38 @@ def transcribe_speech():
         print(f"Error during transcription: {e}")
         return ""
 
+
 def rgb_to_int(color):
     r, g, b = color
     return r + (g * 256) + (b * 256 * 256)
+
+
+def get_dominant_colors(image_path, num_colors=3):
+    img = Image.open(image_path).resize((150, 150), Image.ANTIALIAS)
+    pixels = img.getcolors(img.size[0] * img.size[1])
+
+    color_count = defaultdict(int)
+    for count, color in pixels:
+        color_count[color] += count
+
+    sorted_colors = sorted(color_count.items(), key=itemgetter(1), reverse=True)
+    return [color for color, count in sorted_colors[:num_colors]]
+
+
+def contrast_color(color):
+    r, g, b = color
+    return 255 - r, 255 - g, 255 - b
+
+
+def ask_chatgpt(prompt, max_tokens=1024):
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        temperature=0.7,
+        max_tokens=max_tokens,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+    )
+
+    return response.choices[0].text

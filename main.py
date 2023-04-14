@@ -37,6 +37,20 @@ def configure_presentation():
     return PowerPointApp, presentation
 
 
+def generate_realtime_slide(presentation, translated_text):
+    temp_presentation_path = os.path.abspath(f"temp_presentation-{str(uuid.uuid4())}.pptx")
+
+    temp_presentation = Presentation()
+    generate_slide(temp_presentation, translated_text)
+    temp_presentation.save(temp_presentation_path)
+
+    opened_temp_presentation = PowerPointApp.Presentations.Open(temp_presentation_path)
+    opened_temp_presentation.Slides(1).Copy()
+    presentation.Slides.Paste()
+    opened_temp_presentation.Close()
+    os.remove(temp_presentation_path)
+
+
 if __name__ == "__main__":
     configure_api_keys()
 
@@ -75,19 +89,7 @@ if __name__ == "__main__":
 
                 if detect_question(translated_text):
                     print(f"Question: {translated_text}")
-
-                    temp_presentation_path = os.path.abspath(f"temp_presentation-{str(uuid.uuid4())}.pptx")
-
-                    temp_presentation = Presentation()
-                    generate_slide(temp_presentation, translated_text)
-                    temp_presentation.save(temp_presentation_path)
-
-                    opened_temp_presentation = PowerPointApp.Presentations.Open(temp_presentation_path)
-                    opened_temp_presentation.Slides(1).Copy()
-                    presentation.Slides.Paste()
-                    opened_temp_presentation.Close()
-                    os.remove(temp_presentation_path)
-
+                    generate_realtime_slide(presentation, translated_text)
                     num_slides += 1
                 else:
                     print(f"Not a question {translated_text}")
