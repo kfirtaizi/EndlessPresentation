@@ -4,7 +4,6 @@ from operator import itemgetter
 
 import google.cloud.speech_v1p1beta1 as speech
 import openai
-import pyaudio
 from PIL import Image
 
 
@@ -27,6 +26,10 @@ def detect_question(text):
     return text.endswith("?") or any(text.lower().startswith(qw) for qw in question_words)
 
 
+import pyaudio
+import audioop
+
+
 def transcribe_speech():
     client = speech.SpeechClient()
     config = speech.RecognitionConfig(
@@ -47,10 +50,26 @@ def transcribe_speech():
 
     print("Recording...")
 
+    silence_threshold = 50  # Adjust this value to adjust the sensitivity
+    silence_duration = 3  # The duration (in seconds) of silence to stop recording
+    num_silent_chunks = int(silence_duration * 16000 / 1024)
+
+    silent_chunks = 0
+    recording = True
+
     try:
-        for _ in range(0, int(16000 / 1024 * 3)):
+        while recording:
             data = stream.read(1024, exception_on_overflow=False)
             audio_buffer.write(data)
+
+            rms = audioop.rms(data, 2)
+            if rms < silence_threshold:
+                silent_chunks += 1
+            else:
+                silent_chunks = 0
+
+            if silent_chunks >= num_silent_chunks:
+                recording = False
     except IOError as e:
         print(f"Error while recording audio: {e}")
     finally:
