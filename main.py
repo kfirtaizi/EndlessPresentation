@@ -63,8 +63,12 @@ if __name__ == "__main__":
     num_slides = 1
 
     try:
-        porcupine = pvporcupine.create(keywords=["bumblebee"],
+        wakeword_model_path = "Bambino_it_windows_v2_2_0.ppn"
+        model_path = "porcupine_params_it.pv"
+        porcupine = pvporcupine.create(keyword_paths=[wakeword_model_path],
+                                       model_path=model_path,
                                        access_key='aVBwJU8YoxqCExAuddswdVuNace1HGaEWRzN9e3T1hGVZjewetbaFA==')
+
         pa = pyaudio.PyAudio()
         audio_stream = pa.open(
             rate=porcupine.sample_rate,
