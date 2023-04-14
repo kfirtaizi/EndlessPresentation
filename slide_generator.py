@@ -6,7 +6,7 @@ from PIL import Image
 from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
-from utils import ask_chatgpt, get_dominant_colors, contrast_color
+from utils import ask_chatgpt, get_dominant_colors, contrast_color, text_width
 
 
 def generate_title(prompt, max_tokens=40):
@@ -55,7 +55,8 @@ def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
         image_filename = image_file.name
 
     # Set the slide background image
-    pic = slide.shapes.add_picture(image_filename, 0, 0, width=presentation.slide_width, height=presentation.slide_height)
+    pic = slide.shapes.add_picture(image_filename, 0, 0, width=presentation.slide_width,
+                                   height=presentation.slide_height)
 
     # This moves it to the background
     slide.shapes._spTree.remove(pic._element)
@@ -108,12 +109,22 @@ def generate_slide(presentation, topic):
     title_shape.text = title
     # title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(text_color[0], text_color[1], text_color[2])
 
-    # Adjust the font size if the title exceeds the slide width
-    font_size = Pt(18)  # Set a default font size, e.g., 18 points
+    # Set the initial font size
+    font_size = Pt(44)
 
-    while title_shape.width < font_size * len(title) * 0.6:
-        font_size -= Pt(2)
-        title_shape.text_frame.paragraphs[0].runs[0].font.size = font_size
+    # Calculate the text width based on the initial font size
+    text_width_pixels = text_width(title_shape.text, int(font_size))
+
+    # Adjust the font size if the title exceeds the slide width
+    slide_width_pixels = Inches(13)  # For 16:9
+    # slide_width_pixels = Inches(13) # For 4:3
+    while text_width_pixels > slide_width_pixels:
+        font_size -= Pt(1)
+        text_width_pixels = text_width(title_shape.text, int(font_size))
+
+    # Apply the adjusted font size to the title
+    title_shape.text_frame.paragraphs[0].runs[0].font.size = font_size
+    title_shape.text_frame.paragraphs[0].runs[0].font.name = 'Calibri'
 
     # Add bullet points to the slide
     left = Inches(0)

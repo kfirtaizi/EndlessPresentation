@@ -122,3 +122,8 @@ def ask_chatgpt(prompt, max_tokens=1024):
     )
 
     return response.choices[0].text
+
+
+def text_width(text, font_size):
+    avg_char_width = font_size * 0.6
+    return len(text) * avg_char_width
