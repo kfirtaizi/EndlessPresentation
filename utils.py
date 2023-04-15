@@ -4,7 +4,7 @@ from operator import itemgetter
 
 import google.cloud.speech_v1p1beta1 as speech
 import openai
-from PIL import Image
+from PIL import Image, ImageFilter, ImageEnhance
 
 
 def detect_question(text):
@@ -127,3 +127,22 @@ def ask_chatgpt(prompt, max_tokens=1024):
 def text_width(text, font_size):
     avg_char_width = font_size * 0.6
     return len(text) * avg_char_width
+
+
+def dim_image(image, brightness_factor):
+    enhancer = ImageEnhance.Brightness(image)
+    return enhancer.enhance(brightness_factor)
+
+
+def adjust_contrast(image, contrast_factor):
+    enhancer = ImageEnhance.Contrast(image)
+    return enhancer.enhance(contrast_factor)
+
+
+def apply_blur(image, radius):
+    return image.filter(ImageFilter.GaussianBlur(radius))
+
+
+def apply_overlay(image, color, alpha):
+    overlay = Image.new("RGBA", image.size, color)
+    return Image.blend(image.convert("RGBA"), overlay, alpha)

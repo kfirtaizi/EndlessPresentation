@@ -9,7 +9,8 @@ from PIL import Image
 from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
-from utils import ask_chatgpt, get_dominant_colors, contrast_color, text_width
+from utils import ask_chatgpt, get_dominant_colors, contrast_color, text_width, dim_image, adjust_contrast, apply_blur, \
+    apply_overlay
 
 
 def generate_title(prompt, max_tokens=40):
@@ -50,12 +51,34 @@ def add_picture_from_pil_image(slide, pil_image, left, top, width, height):
     return text_color
 
 
+def apply_background_manipulations(image_filename):
+    # Load the image
+    image = Image.open(image_filename)
+
+    # Adjust brightness, contrast, blur, and overlay
+    brightness_factor = 0.4
+    contrast_factor = 3
+    blur_radius = 2
+    overlay_color = (0, 0, 0, 255)
+    overlay_alpha = 0.3
+
+    image = dim_image(image, brightness_factor)
+    image = adjust_contrast(image, contrast_factor)
+    image = apply_blur(image, blur_radius)
+    image = apply_overlay(image, overlay_color, overlay_alpha)
+
+    # Save the modified image
+    image.save(image_filename)
+
+
 def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
     # Save the PIL image to a temporary in-memory file
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as image_file:
         pil_image.save(image_file, "PNG")
         image_file.seek(0)
         image_filename = image_file.name
+
+    apply_background_manipulations(image_filename)
 
     # Set the slide background image
     pic = slide.shapes.add_picture(image_filename, 0, 0, width=presentation.slide_width,
@@ -65,14 +88,9 @@ def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
     slide.shapes._spTree.remove(pic._element)
     slide.shapes._spTree.insert(2, pic._element)
 
-    # Get dominant colors in the image to present the text later in a contract color
-    dominant_colors = get_dominant_colors(image_filename)
-    text_color = contrast_color(dominant_colors[0])
-
     # Delete the temporary file from disk
     os.remove(image_filename)
-
-    return text_color
+    return
 
 
 def add_related_picture(slide, presentation, prompt):
@@ -88,16 +106,16 @@ def add_related_picture(slide, presentation, prompt):
     # Load the image data into a PIL Image object
     pil_image = Image.open(io.BytesIO(image_data))
 
-    text_color = add_picture_from_pil_image_as_background(slide, presentation, pil_image)
-    return text_color
+    add_picture_from_pil_image_as_background(slide, presentation, pil_image)
+    return
 
 
 def generate_slide(presentation, topic):
-    prompt = f"Change the question: \"'{topic}'\" to a verbal noun title. Start your title here:"
+    prompt = f"Change the question: \"'{topic}'\" to a verbal noun title for an article. Start your title here:"
     title = generate_title(prompt).replace('"', '').replace('\n', '')
     print(f"Title: {title}")
 
-    prompt = f"Context: [Question:{prompt}\nAnswer:{title}]\n\nQuestion: Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
+    prompt = f"Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
              f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here:"
     bullet_points = generate_bullet_points(prompt)
 
@@ -106,12 +124,12 @@ def generate_slide(presentation, topic):
     slide = presentation.slides.add_slide(slide_layout)
 
     # Add background image that is related to the topic
-    text_color = add_related_picture(slide, presentation, title)
+    add_related_picture(slide, presentation, title)
 
     # Set the slide title
     title_shape = slide.shapes.title
     title_shape.text = title
-    title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(text_color[0], text_color[1], text_color[2])
+    title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
 
     # Set the initial font size
     font_size = Pt(44)
@@ -128,10 +146,10 @@ def generate_slide(presentation, topic):
 
     # Apply the adjusted font size to the title
     title_shape.text_frame.paragraphs[0].runs[0].font.size = font_size
-    title_shape.text_frame.paragraphs[0].runs[0].font.name = 'Calibri'
+    title_shape.text_frame.paragraphs[0].runs[0].font.name = 'Goudy Old Style (Headings)'
 
     # Add bullet points to the slide
-    left = Inches(0)
+    left = Inches(1.3)
     top = Inches(1.2)
     width = Inches(random.randint(9, 10))  # Set the width to the random slide width
     height = Inches(6)
@@ -157,5 +175,9 @@ def generate_slide(presentation, topic):
             p = tf.add_paragraph()
             p.text = point
             p.level = 0
+            p.font.name = "Avenir Next LT Pro (Body)"
+            p.font.italic = True
+
+        p.font.color.rgb = RGBColor(255, 255, 255)
 
     return
