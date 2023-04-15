@@ -1,7 +1,10 @@
+import io
 import os
 import random
 import tempfile
 
+import openai
+import requests
 from PIL import Image
 from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
@@ -67,34 +70,35 @@ def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
     text_color = contrast_color(dominant_colors[0])
 
     # Delete the temporary file from disk
-    # os.remove(image_filename)
+    os.remove(image_filename)
 
     return text_color
 
 
 def add_related_picture(slide, presentation, prompt):
-    # # Generate the image using DALL-E
-    # response = openai.Image.create(prompt=prompt)
-    #
-    # # Get the image URL from the response
-    # image_url = response["data"][0]["url"]
-    #
-    # # Download the image from the URL
-    # image_data = requests.get(image_url).content
+    # Generate the image using DALL-E
+    response = openai.Image.create(prompt=prompt)
+
+    # Get the image URL from the response
+    image_url = response["data"][0]["url"]
+
+    # Download the image from the URL
+    image_data = requests.get(image_url).content
 
     # Load the image data into a PIL Image object
-    pil_image = Image.open(r"C:\Users\kfir1\AppData\Local\Temp\tmpid2gdvex.png")
+    pil_image = Image.open(io.BytesIO(image_data))
 
     text_color = add_picture_from_pil_image_as_background(slide, presentation, pil_image)
     return text_color
 
 
 def generate_slide(presentation, topic):
-    prompt = f"Formulate the question: \"'{topic}'\" as a nice title (don't make it too formal) for a slide in a presentation"
+    prompt = f"Change the question: \"'{topic}'\" to a verbal noun title. Start your title here:"
     title = generate_title(prompt).replace('"', '').replace('\n', '')
+    print(f"Title: {title}")
 
     prompt = f"Context: [Question:{prompt}\nAnswer:{title}]\n\nQuestion: Please provide a summary and interesting information about the topic \"{title}\" using bullet points. Use the following format for your response:" \
-             f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here (No need for a title again):"
+             f"\n• Main Point 1\n--• Sub-point 1.1\n--• Sub-point 1.2\n• Main Point 2\n\nStart your response here:"
     bullet_points = generate_bullet_points(prompt)
 
     # Add a slide to the presentation
@@ -102,12 +106,12 @@ def generate_slide(presentation, topic):
     slide = presentation.slides.add_slide(slide_layout)
 
     # Add background image that is related to the topic
-    # text_color = add_related_picture(slide, presentation, title)
+    text_color = add_related_picture(slide, presentation, title)
 
     # Set the slide title
     title_shape = slide.shapes.title
     title_shape.text = title
-    # title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(text_color[0], text_color[1], text_color[2])
+    title_shape.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(text_color[0], text_color[1], text_color[2])
 
     # Set the initial font size
     font_size = Pt(44)
@@ -117,7 +121,7 @@ def generate_slide(presentation, topic):
 
     # Adjust the font size if the title exceeds the slide width
     slide_width_pixels = Inches(13)  # For 16:9
-    # slide_width_pixels = Inches(13) # For 4:3
+
     while text_width_pixels > slide_width_pixels:
         font_size -= Pt(1)
         text_width_pixels = text_width(title_shape.text, int(font_size))

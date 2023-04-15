@@ -8,6 +8,7 @@ import pvporcupine
 import pyaudio
 import win32com.client
 from google.cloud import translate_v2
+from pptx.util import Inches
 
 from slide_generator import generate_slide
 import collections
@@ -41,6 +42,11 @@ def generate_realtime_slide(presentation, translated_text):
     temp_presentation_path = os.path.abspath(f"temp_presentation-{str(uuid.uuid4())}.pptx")
 
     temp_presentation = Presentation()
+
+    # Set slide width and height for a 16:9 aspect ratio
+    temp_presentation.slide_width = Inches(13.33)  # 16:9 aspect ratio
+    temp_presentation.slide_height = Inches(7.5)
+
     generate_slide(temp_presentation, translated_text)
     temp_presentation.save(temp_presentation_path)
 

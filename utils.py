@@ -51,7 +51,7 @@ def transcribe_speech():
     print("Recording...")
 
     silence_threshold = 50  # Adjust this value to adjust the sensitivity
-    silence_duration = 3  # The duration (in seconds) of silence to stop recording
+    silence_duration = 2  # The duration (in seconds) of silence to stop recording
     num_silent_chunks = int(silence_duration * 16000 / 1024)
 
     silent_chunks = 0
