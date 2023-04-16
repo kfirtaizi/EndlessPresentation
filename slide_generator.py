@@ -93,7 +93,7 @@ def add_picture_from_pil_image_as_background(slide, presentation, pil_image):
     return
 
 
-def add_related_picture(slide, presentation, prompt):
+async def add_related_picture(slide, presentation, prompt):
     # Generate the image using DALL-E
     response = openai.Image.create(prompt=prompt)
 
@@ -110,7 +110,7 @@ def add_related_picture(slide, presentation, prompt):
     return
 
 
-def generate_slide(presentation, topic):
+async def generate_slide(presentation, topic):
     prompt = f"Change the question: \"'{topic}'\" to a verbal noun title for an article. Start your title here:"
     title = generate_title(prompt).replace('"', '').replace('\n', '')
     print(f"Title: {title}")
@@ -124,7 +124,7 @@ def generate_slide(presentation, topic):
     slide = presentation.slides.add_slide(slide_layout)
 
     # Add background image that is related to the topic
-    # add_related_picture(slide, presentation, title)
+    await add_related_picture(slide, presentation, title)
 
     # Set the slide title
     title_shape = slide.shapes.title
@@ -173,7 +173,7 @@ def generate_slide(presentation, topic):
             p.level = 1
         else:
             p = tf.add_paragraph()
-            p.text = point
+            p.text = u'\u2794' + ' ' + point.strip("•")
             p.level = 0
             p.font.name = "Avenir Next LT Pro (Body)"
             p.font.italic = True

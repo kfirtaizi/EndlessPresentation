@@ -1,3 +1,4 @@
+import asyncio
 import html
 import os
 import struct
@@ -38,7 +39,7 @@ def configure_presentation():
     return PowerPointApp, presentation
 
 
-def generate_realtime_slide(presentation, translated_text):
+async def generate_realtime_slide(PowerPointApp, presentation, translated_text):
     temp_presentation_path = os.path.abspath(f"temp_presentation-{str(uuid.uuid4())}.pptx")
 
     temp_presentation = Presentation()
@@ -47,7 +48,7 @@ def generate_realtime_slide(presentation, translated_text):
     temp_presentation.slide_width = Inches(13.33)  # 16:9 aspect ratio
     temp_presentation.slide_height = Inches(7.5)
 
-    generate_slide(temp_presentation, translated_text)
+    await generate_slide(temp_presentation, translated_text)
     temp_presentation.save(temp_presentation_path)
 
     opened_temp_presentation = PowerPointApp.Presentations.Open(temp_presentation_path)
@@ -57,7 +58,7 @@ def generate_realtime_slide(presentation, translated_text):
     os.remove(temp_presentation_path)
 
 
-if __name__ == "__main__":
+async def main():
     configure_api_keys()
 
     PowerPointApp, presentation = configure_presentation()
@@ -99,7 +100,7 @@ if __name__ == "__main__":
 
                 if detect_question(translated_text):
                     print(f"Question: {translated_text}")
-                    generate_realtime_slide(presentation, translated_text)
+                    await generate_realtime_slide(PowerPointApp, presentation, translated_text)
                     num_slides += 1
                 else:
                     print(f"Not a question {translated_text}")
@@ -124,3 +125,8 @@ if __name__ == "__main__":
 
         # Quit the PowerPoint application
         PowerPointApp.Quit()
+
+
+if __name__ == "__main__":
+    while True:
+        asyncio.run(main())
