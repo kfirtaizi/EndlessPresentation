@@ -124,7 +124,7 @@ def generate_slide(presentation, topic):
     slide = presentation.slides.add_slide(slide_layout)
 
     # Add background image that is related to the topic
-    add_related_picture(slide, presentation, title)
+    # add_related_picture(slide, presentation, title)
 
     # Set the slide title
     title_shape = slide.shapes.title
@@ -177,6 +177,7 @@ def generate_slide(presentation, topic):
             p.level = 0
             p.font.name = "Avenir Next LT Pro (Body)"
             p.font.italic = True
+            p.space_before = Pt(10)
 
         p.font.color.rgb = RGBColor(255, 255, 255)
 
